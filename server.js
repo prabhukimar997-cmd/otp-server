@@ -6,12 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔐 ENV check
-if (!process.env.EMAIL || !process.env.PASS) {
-  console.log("❌ ERROR: EMAIL या PASS missing hai (Railway Variables check karo)");
-}
-
-// 📧 Mail transporter
+// 🔐 Gmail config (ENV से)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -23,12 +18,12 @@ const transporter = nodemailer.createTransport({
 // 🧠 OTP store
 let otpStore = {};
 
-// 🟢 Health check
+// 🟢 Test route
 app.get("/", (req, res) => {
   res.send("Server OK 🚀");
 });
 
-// 🔥 SEND OTP
+// 🔥 Send OTP
 app.post("/send-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -40,46 +35,35 @@ app.post("/send-otp", async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
     otpStore[email] = otp;
 
-    console.log("📩 Sending OTP to:", email);
-    console.log("🔢 OTP:", otp);
+    console.log("Sending OTP:", otp);
 
     await transporter.sendMail({
       from: process.env.EMAIL,
       to: email,
-      subject: "Your OTP Code",
-      text: "Your OTP is: " + otp
+      subject: "OTP Code",
+      text: `Your OTP is: ${otp}`
     });
-
-    console.log("✅ Email sent successfully");
 
     res.json({ success: true });
 
   } catch (err) {
-    console.log("❌ MAIL ERROR:", err.message);
+    console.log("ERROR:", err.message);
     res.json({ success: false, error: err.message });
   }
 });
 
-// 🔐 VERIFY OTP
+// 🔐 Verify OTP
 app.post("/verify-otp", (req, res) => {
   const { email, otp } = req.body;
 
-  if (!email || !otp) {
-    return res.json({ success: false });
-  }
-
   if (otpStore[email] == otp) {
     delete otpStore[email];
-    console.log("✅ OTP Verified:", email);
-    res.json({ success: true });
-  } else {
-    console.log("❌ Invalid OTP:", email);
-    res.json({ success: false });
+    return res.json({ success: true });
   }
+
+  res.json({ success: false });
 });
 
-// 🚀 START SERVER (Railway compatible)
+// 🚀 Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🚀 Server running on port " + PORT);
-});
+app.listen(PORT, () => console.log("Server running on " + PORT));
