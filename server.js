@@ -1,29 +1,3 @@
-const express = require("express");
-const nodemailer = require("nodemailer");
-const cors = require("cors");
-
-const app = express();
-app.use(express.json());
-app.use(cors());
-
-// 🔐 Gmail config (ENV से)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASS
-  }
-});
-
-// 🧠 OTP store
-let otpStore = {};
-
-// 🟢 Test route
-app.get("/", (req, res) => {
-  res.send("Server OK 🚀");
-});
-
-// 🔥 Send OTP
 app.post("/send-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -37,33 +11,26 @@ app.post("/send-otp", async (req, res) => {
 
     console.log("Sending OTP:", otp);
 
+    // 🔥 transporter yaha banao
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASS
+      }
+    });
+
     await transporter.sendMail({
-      from: process.env.EMAIL,
+      from: `"OTP Server" <${process.env.EMAIL}>`,
       to: email,
-      subject: "OTP Code",
+      subject: "Your OTP Code",
       text: `Your OTP is: ${otp}`
     });
 
     res.json({ success: true });
 
   } catch (err) {
-    console.log("ERROR:", err.message);
+    console.log("ERROR:", err);
     res.json({ success: false, error: err.message });
   }
 });
-
-// 🔐 Verify OTP
-app.post("/verify-otp", (req, res) => {
-  const { email, otp } = req.body;
-
-  if (otpStore[email] == otp) {
-    delete otpStore[email];
-    return res.json({ success: true });
-  }
-
-  res.json({ success: false });
-});
-
-// 🚀 Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on " + PORT));
